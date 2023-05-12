@@ -1,28 +1,34 @@
 import json
 import re
-import cohere
+import cohere, openai
 import time
 
-
-co = cohere.Client('U0pNRE1uLERaCJJFPOQr5MKYLZ1rl5UkmcL5r1VA')
+# openai.api_key = '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'
+co = cohere.Client('nn1vbXB6F6uvuQfetzMRVdttxiKQf1Ch26I0sh5Q')
 
 # Load existing JSON data from the file
 with open("index_2.json", "r") as json_file:
     passages_data = json.load(json_file)
 
 # Initialize the list to store the generated QA pairs
-generated_qa_pairs = []
-
+checkpoint = passages_data[1400:]
 counter = 0
+print(len(passages_data))
 # Generate QA pairs for each passage
-for entry in passages_data:
+for entry in checkpoint:
     try:
-        # if counter % 4 == 0 and counter != 0:
-        #     print("Sleeping for 60 seconds")
-        #     time.sleep(60)
-        #     continue
-
+        generated_qa_pairs = []
         context = entry["content"]
+        print(f'Trying this passage {context[:100]}')
+        # response = openai.Completion.create(
+        #       model="text-davinci-003",
+        #       prompt="Ce passages est tiré des livres dont leur thèmes est l'histoire du Maroc. Generer une question historique (pas qcm) en relation au passage suivant, chaque question doit avoir sa réponse dans le passage et doit avoir sa réponse sous la forme suivante:\nQuestion:\nReponse:\n\nPassage :{passage}\n\nQuestion:",
+        #       temperature=0.7,
+        #       max_tokens=256,
+        #       top_p=1,
+        #       frequency_penalty=0,
+        #       presence_penalty=0
+        #     )
 
         response = co.generate(
             model='command',
@@ -55,13 +61,19 @@ for entry in passages_data:
             "answer": generated_answer
         }
 
-        # Append the QA pair to the list
-        generated_qa_pairs.append(qa_pair)
-
-    # Append the generated QA pairs to the existing JSON data
+        # Check if the QA pair already exists in the JSON file
         with open("qa_dataset.json", "r") as json_file:
             existing_data = json.load(json_file)
 
+        # existing_questions = [qa["question"] for qa in existing_data]
+        # if generated_question in existing_questions:
+        #     print("QA pair already exists. Skipping...")
+        #     continue
+
+        # Append the QA pair to the list
+        generated_qa_pairs.append(qa_pair)
+
+        # Append the generated QA pairs to the existing JSON data
         existing_data.extend(generated_qa_pairs)
 
         # Write the updated data back to the JSON file
@@ -70,7 +82,6 @@ for entry in passages_data:
 
         print("QA pairs generated and added to the JSON dataset.")
     except cohere.error.CohereAPIError:
-        print('API tired')  
+        print('API tired')
         time.sleep(65)
-
-        continue    
+        continue
